@@ -19,8 +19,9 @@ var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[
 
 type Bridge struct {
 	sync.Mutex
-	registry       RegistryAdapter
-	docker         *dockerapi.Client
+	registry RegistryAdapter
+	docker   *dockerapi.Client
+	// services maps `containerId` --> `Service`
 	services       map[string][]*Service
 	deadContainers map[string]*DeadContainer
 	config         Config
@@ -91,6 +92,7 @@ func (b *Bridge) Sync(quiet bool) {
 	b.Lock()
 	defer b.Unlock()
 
+	// get all containers from the host
 	containers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{})
 	if err != nil && quiet {
 		log.Println("error listing containers, skipping sync")
@@ -101,7 +103,9 @@ func (b *Bridge) Sync(quiet bool) {
 
 	log.Printf("Syncing services on %d containers", len(containers))
 
-	// NOTE: This assumes reregistering will do the right thing, i.e. nothing..
+	// for each container, gets the Service associated with that `containerID`
+	// if the service is not associated yet, adds it. Otherwise, if present,
+	// registers the service again.
 	for _, listing := range containers {
 		services := b.services[listing.ID]
 		if services == nil {
@@ -116,17 +120,30 @@ func (b *Bridge) Sync(quiet bool) {
 		}
 	}
 
+	// Performs two types of cleanups:
+	//  1. remove services that are registered in registrator (locally) and  do
+	//     not have a container running in the docker host.
+	//
+	//  2. remove services that were registered in the external discovery before
+	//     and were created by this HOST but do not have a matching container
+	//     anymore.
+	//
 	// Clean up services that were registered previously, but aren't
 	// acknowledged within registrator
 	if b.config.Cleanup {
 		// Remove services if its corresponding container is not running
 		log.Println("Listing non-exited containers")
 		filters := map[string][]string{"status": {"created", "restarting", "running", "paused"}}
+
+		// lists all non-exited containers
 		nonExitedContainers, err := b.docker.ListContainers(dockerapi.ListContainersOptions{Filters: filters})
 		if err != nil {
 			log.Println("error listing nonExitedContainers, skipping sync", err)
 			return
 		}
+
+		// for each service that is registered in registrator, checks if the service
+		// is in the set on non-exited containers. If so, fine, otherwise, remove it.
 		for listingId := range b.services {
 			found := false
 			for _, container := range nonExitedContainers {
@@ -142,41 +159,44 @@ func (b *Bridge) Sync(quiet bool) {
 			}
 		}
 
-		log.Println("Cleaning up dangling services")
-		extServices, err := b.registry.Services()
-		if err != nil {
-			log.Println("cleanup failed:", err)
-			return
-		}
+		//  // removes containers that were previously registrated on the
+		//  // service discovery but do not have a container counterpart
+		//  // anymore.
+		//	log.Println("Cleaning up dangling services")
+		//	extServices, err := b.registry.Services()
+		//	if err != nil {
+		//		log.Println("cleanup failed:", err)
+		//		return
+		//	}
 
-	Outer:
-		for _, extService := range extServices {
-			matches := serviceIDPattern.FindStringSubmatch(extService.ID)
-			if len(matches) != 3 {
-				// There's no way this was registered by us, so leave it
-				continue
-			}
-			serviceHostname := matches[1]
-			if serviceHostname != Hostname {
-				// ignore because registered on a different host
-				continue
-			}
-			serviceContainerName := matches[2]
-			for _, listing := range b.services {
-				for _, service := range listing {
-					if service.Name == extService.Name && serviceContainerName == service.Origin.container.Name[1:] {
-						continue Outer
-					}
-				}
-			}
-			log.Println("dangling:", extService.ID)
-			err := b.registry.Deregister(extService)
-			if err != nil {
-				log.Println("deregister failed:", extService.ID, err)
-				continue
-			}
-			log.Println(extService.ID, "removed")
-		}
+		//Outer:
+		//	for _, extService := range extServices {
+		//		matches := serviceIDPattern.FindStringSubmatch(extService.ID)
+		//		if len(matches) != 3 {
+		//			// There's no way this was registered by us, so leave it
+		//			continue
+		//		}
+		//		serviceHostname := matches[1]
+		//		if serviceHostname != Hostname {
+		//			// ignore because registered on a different host
+		//			continue
+		//		}
+		//		serviceContainerName := matches[2]
+		//		for _, listing := range b.services {
+		//			for _, service := range listing {
+		//				if service.Name == extService.Name && serviceContainerName == service.Origin.container.Name[1:] {
+		//					continue Outer
+		//				}
+		//			}
+		//		}
+		//		log.Println("dangling:", extService.ID)
+		//		err := b.registry.Deregister(extService)
+		//		if err != nil {
+		//			log.Println("deregister failed:", extService.ID, err)
+		//			continue
+		//		}
+		//		log.Println(extService.ID, "removed")
+		//	}
 	}
 }
 

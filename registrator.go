@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cirocosta/registrator/bridge"
 	dockerapi "github.com/fsouza/go-dockerclient"
 	"github.com/gliderlabs/pkg/usage"
-	"github.com/gliderlabs/registrator/bridge"
 )
 
 var Version string
@@ -72,10 +72,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	if *hostIp != "" {
-		log.Println("Forcing host IP to", *hostIp)
-	}
-
 	if (*refreshTtl == 0 && *refreshInterval > 0) || (*refreshTtl > 0 && *refreshInterval == 0) {
 		assert(errors.New("-ttl and -ttl-refresh must be specified together or not at all"))
 	} else if *refreshTtl > 0 && *refreshTtl <= *refreshInterval {
@@ -98,8 +94,33 @@ func main() {
 		assert(errors.New("-deregister must be \"always\" or \"on-success\""))
 	}
 
+	var machineIp = ""
+
+	if len(*useIpFromDaemonLabel) > 0 {
+		info, err := docker.Info()
+		assert(err)
+
+		var found = false
+		for _, label := range info.Labels {
+			if strings.HasPrefix(label, *useIpFromDaemonLabel) {
+				found = true
+				machineIp = strings.TrimPrefix(label, *useIpFromDaemonLabel+"=")
+				break
+			}
+		}
+
+		if !found {
+			log.Fatal("Can't get host ip from daemon label ", *useIpFromDaemonLabel)
+		}
+	} else {
+		if *hostIp != "" {
+			log.Println("Forcing host IP to", *hostIp)
+			machineIp = *hostIp
+		}
+	}
+
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
-		HostIp:               *hostIp,
+		HostIp:               machineIp,
 		Internal:             *internal,
 		UseIpFromLabel:       *useIpFromLabel,
 		UseIpFromDaemonLabel: *useIpFromDaemonLabel,
