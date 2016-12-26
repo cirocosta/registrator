@@ -15,6 +15,6 @@ build-linux:
 	CGO_ENABLED=0 GOOS=linux go build -o ./registrator-linux
 
 build-image: build-linux
-	docker build -f Dockerfile -t cirocosta/registrator .
+	docker build -f Dockerfile -t cirocosta/registrator --squash .
 
 .PHONY: build build-linux build-image install deps
