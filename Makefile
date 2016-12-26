@@ -9,7 +9,7 @@ deps:
 	go get -v
 
 build:
-	go build -v -o ./registrator
+	go build -v -o ./registrator .
 
 build-linux: 
 	CGO_ENABLED=0 GOOS=linux go build -o ./registrator-linux

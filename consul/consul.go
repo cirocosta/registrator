@@ -2,7 +2,7 @@ package consul
 
 import (
 	"fmt"
-	"github.com/gliderlabs/registrator/bridge"
+	"github.com/cirocosta/registrator/bridge"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-cleanhttp"
 	"log"
