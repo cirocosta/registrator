@@ -21,6 +21,7 @@ var versionChecker = usage.NewChecker("registrator", Version)
 var hostIp = flag.String("ip", "", "IP for ports mapped to the host")
 var internal = flag.Bool("internal", false, "Use internal ports instead of published ones")
 var useIpFromLabel = flag.String("useIpFromLabel", "", "Use IP which is stored in a label assigned to the container")
+var useIpFromDaemonLabel = flag.String("useIpFromDaemonLabel", "", "Use IP from the Daemon labels")
 var refreshInterval = flag.Int("ttl-refresh", 0, "Frequency with which service TTLs are refreshed")
 var refreshTtl = flag.Int("ttl", 0, "TTL for services (default is no expiry)")
 var forceTags = flag.String("tags", "", "Append tags for all registered services")
@@ -28,6 +29,7 @@ var resyncInterval = flag.Int("resync", 0, "Frequency with which services are re
 var deregister = flag.String("deregister", "always", "Deregister exited services \"always\" or \"on-success\"")
 var retryAttempts = flag.Int("retry-attempts", 0, "Max retry attempts to establish a connection with the backend. Use -1 for infinite retries")
 var retryInterval = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
+var swarmMode = flag.Bool("swarm-mode", false, "Whether it runs with swarm mode.")
 var cleanup = flag.Bool("cleanup", false, "Remove dangling services")
 
 func getopt(name, def string) string {
@@ -97,14 +99,16 @@ func main() {
 	}
 
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
-		HostIp:          *hostIp,
-		Internal:        *internal,
-		UseIpFromLabel:  *useIpFromLabel,
-		ForceTags:       *forceTags,
-		RefreshTtl:      *refreshTtl,
-		RefreshInterval: *refreshInterval,
-		DeregisterCheck: *deregister,
-		Cleanup:         *cleanup,
+		HostIp:               *hostIp,
+		Internal:             *internal,
+		UseIpFromLabel:       *useIpFromLabel,
+		UseIpFromDaemonLabel: *useIpFromDaemonLabel,
+		ForceTags:            *forceTags,
+		RefreshTtl:           *refreshTtl,
+		RefreshInterval:      *refreshInterval,
+		DeregisterCheck:      *deregister,
+		Cleanup:              *cleanup,
+		SwarmMode:            *swarmMode,
 	})
 
 	assert(err)
