@@ -105,6 +105,7 @@ func main() {
 			if strings.HasPrefix(label, *useIpFromDaemonLabel) {
 				found = true
 				machineIp = strings.TrimPrefix(label, *useIpFromDaemonLabel+"=")
+				log.Printf("Using host IP %s inferred from label %s\n", machineIp, *useIpFromDaemonLabel)
 				break
 			}
 		}
@@ -117,6 +118,10 @@ func main() {
 			log.Println("Forcing host IP to", *hostIp)
 			machineIp = *hostIp
 		}
+	}
+
+	if *swarmMode {
+		log.Println("Swarm Mode activated - Only swarm tasks will be registered.")
 	}
 
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{

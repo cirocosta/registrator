@@ -295,7 +295,20 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	service := new(Service)
 	service.Origin = port
-	service.ID = hostname + ":" + container.Name[1:] + ":" + port.ExposedPort
+
+	if b.config.SwarmMode {
+		taskId, labelExists := container.Config.Labels["com.docker.swarm.task.id"]
+
+		if !labelExists {
+			log.Println("Ignoring container without swarm labels present ", container.ID[:12])
+			return nil
+		}
+
+		service.ID = taskId
+	} else {
+		service.ID = container.ID
+	}
+
 	service.Name = mapDefault(metadata, "name", defaultName)
 	if isgroup && !metadataFromPort["name"] {
 		service.Name += "-" + port.ExposedPort
