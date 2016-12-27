@@ -300,7 +300,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		taskId, labelExists := container.Config.Labels["com.docker.swarm.task.id"]
 
 		if !labelExists {
-			log.Println("Ignoring container without swarm labels present ", container.ID[:12])
+			log.Println("Ignoring container without swarm labels ", container.ID[:12])
 			return nil
 		}
 
@@ -309,10 +309,27 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		service.ID = container.ID
 	}
 
-	service.Name = mapDefault(metadata, "name", defaultName)
-	if isgroup && !metadataFromPort["name"] {
-		service.Name += "-" + port.ExposedPort
+	if b.config.WeDeployMode {
+		wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
+		if !exists {
+			log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
+			return nil
+		}
+
+		wedeployProject, exists := container.Config.Labels["com.wedeploy.container.project"]
+		if !exists {
+			log.Println("Ignoring container without wedeploy project label ", container.ID[:12])
+			return nil
+		}
+
+		service.Name = wedeployService + "_" + wedeployProject
+	} else {
+		service.Name = mapDefault(metadata, "name", defaultName)
+		if isgroup && !metadataFromPort["name"] {
+			service.Name += "-" + port.ExposedPort
+		}
 	}
+
 	var p int
 
 	if b.config.Internal == true {

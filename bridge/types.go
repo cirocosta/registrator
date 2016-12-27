@@ -30,6 +30,7 @@ type Config struct {
 	DeregisterCheck      string
 	Cleanup              bool
 	SwarmMode            bool
+	WeDeployMode         bool
 }
 
 type Service struct {

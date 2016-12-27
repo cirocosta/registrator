@@ -30,6 +30,7 @@ var deregister = flag.String("deregister", "always", "Deregister exited services
 var retryAttempts = flag.Int("retry-attempts", 0, "Max retry attempts to establish a connection with the backend. Use -1 for infinite retries")
 var retryInterval = flag.Int("retry-interval", 2000, "Interval (in millisecond) between retry-attempts.")
 var swarmMode = flag.Bool("swarm-mode", false, "Whether it runs with swarm mode.")
+var wedeployMode = flag.Bool("wedeploy-mode", false, "Whether it runs using wedeploy nomeclatures.")
 var cleanup = flag.Bool("cleanup", false, "Remove dangling services")
 
 func getopt(name, def string) string {
@@ -124,6 +125,10 @@ func main() {
 		log.Println("Swarm Mode activated - Only swarm tasks will be registered.")
 	}
 
+	if *wedeployMode {
+		log.Println("WeDeploy Mode activated - Only wedeploy containers will be registered.")
+	}
+
 	b, err := bridge.New(docker, flag.Arg(0), bridge.Config{
 		HostIp:               machineIp,
 		Internal:             *internal,
@@ -135,6 +140,7 @@ func main() {
 		DeregisterCheck:      *deregister,
 		Cleanup:              *cleanup,
 		SwarmMode:            *swarmMode,
+		WeDeployMode:         *wedeployMode,
 	})
 
 	assert(err)

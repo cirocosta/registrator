@@ -91,6 +91,7 @@ func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServ
 	if status := service.Attrs["check_initial_status"]; status != "" {
 		check.Status = status
 	}
+
 	if path := service.Attrs["check_http"]; path != "" {
 		check.HTTP = fmt.Sprintf("http://%s:%d%s", service.IP, service.Port, path)
 		if timeout := service.Attrs["check_timeout"]; timeout != "" {
