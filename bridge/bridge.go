@@ -252,6 +252,17 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		return nil
 	}
 
+	wedeployPort, exists := container.Config.Labels["com.wedeploy.container.container.port"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy port specified ", container.ID[:12])
+		return nil
+	}
+
+	if wedeployPort != port.ExposedPort {
+		log.Println("Ignoring container service with different port specified ", container.ID[:12])
+		return nil
+	}
+
 	service.Name = wedeployService + "_" + wedeployProject
 
 	var p int
