@@ -211,7 +211,6 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
-//	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
 
 	// not sure about this logic. kind of want to remove it.
 	hostname := Hostname
@@ -239,10 +238,8 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	service := new(Service)
 	service.Origin = port
 
-	// set service ID
 	service.ID = container.ID
 
-	// filter out non-wedeploy containers
 	wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
 	if !exists {
 		log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
@@ -255,9 +252,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		return nil
 	}
 
-	// change service name too
 	service.Name = wedeployService + "_" + wedeployProject
-
 
 	var p int
 
