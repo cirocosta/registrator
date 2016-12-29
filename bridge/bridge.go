@@ -15,6 +15,12 @@ import (
 	dockerapi "github.com/fsouza/go-dockerclient"
 )
 
+const (
+	WEDEPLOY_PROJECT_LABEL        = "com.wedeploy.container.container"
+	WEDEPLOY_CONTAINER_LABEL      = "com.wedeploy.container.project"
+	WEDEPLOY_CONTAINER_PORT_LABEL = "com.wedeploy.container.container.port"
+)
+
 var serviceIDPattern = regexp.MustCompile(`^(.+?):([a-zA-Z0-9][a-zA-Z0-9_.-]+):[0-9]+(?::udp)?$`)
 
 type Bridge struct {
@@ -310,13 +316,13 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	}
 
 	if b.config.WeDeployMode {
-		wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
+		wedeployService, exists := container.Config.Labels[WEDEPLOY_CONTAINER_LABEL]
 		if !exists {
 			log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
 			return nil
 		}
 
-		wedeployProject, exists := container.Config.Labels["com.wedeploy.container.project"]
+		wedeployProject, exists := container.Config.Labels[WEDEPLOY_PROJECT_LABEL]
 		if !exists {
 			log.Println("Ignoring container without wedeploy project label ", container.ID[:12])
 			return nil
@@ -332,13 +338,28 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	var p int
 
-	if b.config.Internal == true {
+	if b.config.WeDeployMode {
+		wedeployPort, exists := container.Config.Labels[WEDEPLOY_CONTAINER_PORT_LABEL]
+		if !exists {
+			log.Println("Ignoring container without wedeploy port specified ", container.ID[:12])
+			return nil
+		}
+
+		if wedeployPort != port.ExposedPort {
+			log.Println("Ignoring container service with different port specified ", container.ID[:12])
+			return nil
+		}
+
+		service.IP = port.HostIP
+		p, _ = strconv.Atoi(port.HostPort)
+	} else if b.config.Internal == true {
 		service.IP = port.ExposedIP
 		p, _ = strconv.Atoi(port.ExposedPort)
-	} else {
+	} else if b.config.Internal == false {
 		service.IP = port.HostIP
 		p, _ = strconv.Atoi(port.HostPort)
 	}
+
 	service.Port = p
 
 	if b.config.UseIpFromLabel != "" {
