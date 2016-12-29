@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -248,7 +247,7 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
-	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
+//	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
 
 	// not sure about this logic. kind of want to remove it.
 	hostname := Hostname
@@ -266,7 +265,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		port.HostIP = b.config.HostIp
 	}
 
-	metadata, metadataFromPort := serviceMetaData(container.Config, port.ExposedPort)
+	metadata, _ := serviceMetaData(container.Config, port.ExposedPort)
 
 	ignore := mapDefault(metadata, "ignore", "")
 	if ignore != "" {
@@ -275,11 +274,27 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	service := new(Service)
 	service.Origin = port
-	service.ID = hostname + ":" + container.Name[1:] + ":" + port.ExposedPort
-	service.Name = mapDefault(metadata, "name", defaultName)
-	if isgroup && !metadataFromPort["name"] {
-		service.Name += "-" + port.ExposedPort
+
+	// set service ID
+	service.ID = container.ID
+
+	// filter out non-wedeploy containers
+	wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
+		return nil
 	}
+
+	wedeployProject, exists := container.Config.Labels["com.wedeploy.container.project"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy project label ", container.ID[:12])
+		return nil
+	}
+
+	// change service name too
+	service.Name = wedeployService + "_" + wedeployProject
+
+
 	var p int
 
 	if b.config.Internal == true {
