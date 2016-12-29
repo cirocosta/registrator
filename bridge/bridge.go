@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	WEDEPLOY_PROJECT_LABEL        = "com.wedeploy.container.container"
-	WEDEPLOY_CONTAINER_LABEL      = "com.wedeploy.container.project"
+	WEDEPLOY_PROJECT_LABEL        = "com.wedeploy.container.project"
+	WEDEPLOY_CONTAINER_LABEL      = "com.wedeploy.container.container"
 	WEDEPLOY_CONTAINER_PORT_LABEL = "com.wedeploy.container.container.port"
 )
 
