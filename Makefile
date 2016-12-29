@@ -1,4 +1,4 @@
-NAME=registrator
+NAME=wedeploy/registrator
 VERSION=$(shell cat VERSION)
 DEV_RUN_OPTS ?= consul:
 
@@ -11,15 +11,15 @@ dev:
 build:
 	mkdir -p build
 	docker build -t $(NAME):$(VERSION) .
-	docker save $(NAME):$(VERSION) | gzip -9 > build/$(NAME)_$(VERSION).tgz
+	docker save $(NAME):$(VERSION) | gzip -9 > build/wedeploy_registrator_$(VERSION).tgz
 
-release:
-	rm -rf release && mkdir release
-	go get github.com/progrium/gh-release/...
-	cp build/* release
-	gh-release create gliderlabs/$(NAME) $(VERSION) \
-		$(shell git rev-parse --abbrev-ref HEAD) $(VERSION)
-	glu hubtag gliderlabs/$(NAME) $(VERSION)
+#release:
+#	rm -rf release && mkdir release
+#	go get github.com/progrium/gh-release/...
+#	cp build/* release
+#	gh-release create gliderlabs/$(NAME) $(VERSION) \
+#		$(shell git rev-parse --abbrev-ref HEAD) $(VERSION)
+#	glu hubtag gliderlabs/$(NAME) $(VERSION)
 
 docs:
 	boot2docker ssh "sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'" || true
