@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -141,42 +140,6 @@ func (b *Bridge) Sync(quiet bool) {
 				go b.RemoveOnExit(listingId)
 			}
 		}
-
-		log.Println("Cleaning up dangling services")
-		extServices, err := b.registry.Services()
-		if err != nil {
-			log.Println("cleanup failed:", err)
-			return
-		}
-
-	Outer:
-		for _, extService := range extServices {
-			matches := serviceIDPattern.FindStringSubmatch(extService.ID)
-			if len(matches) != 3 {
-				// There's no way this was registered by us, so leave it
-				continue
-			}
-			serviceHostname := matches[1]
-			if serviceHostname != Hostname {
-				// ignore because registered on a different host
-				continue
-			}
-			serviceContainerName := matches[2]
-			for _, listing := range b.services {
-				for _, service := range listing {
-					if service.Name == extService.Name && serviceContainerName == service.Origin.container.Name[1:] {
-						continue Outer
-					}
-				}
-			}
-			log.Println("dangling:", extService.ID)
-			err := b.registry.Deregister(extService)
-			if err != nil {
-				log.Println("deregister failed:", extService.ID, err)
-				continue
-			}
-			log.Println(extService.ID, "removed")
-		}
 	}
 }
 
@@ -248,7 +211,6 @@ func (b *Bridge) add(containerId string, quiet bool) {
 
 func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	container := port.container
-	defaultName := strings.Split(path.Base(container.Config.Image), ":")[0]
 
 	// not sure about this logic. kind of want to remove it.
 	hostname := Hostname
@@ -266,7 +228,7 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 		port.HostIP = b.config.HostIp
 	}
 
-	metadata, metadataFromPort := serviceMetaData(container.Config, port.ExposedPort)
+	metadata, _ := serviceMetaData(container.Config, port.ExposedPort)
 
 	ignore := mapDefault(metadata, "ignore", "")
 	if ignore != "" {
@@ -275,11 +237,34 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	service := new(Service)
 	service.Origin = port
-	service.ID = hostname + ":" + container.Name[1:] + ":" + port.ExposedPort
-	service.Name = mapDefault(metadata, "name", defaultName)
-	if isgroup && !metadataFromPort["name"] {
-		service.Name += "-" + port.ExposedPort
+
+	service.ID = container.ID
+
+	wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
+		return nil
 	}
+
+	wedeployProject, exists := container.Config.Labels["com.wedeploy.container.project"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy project label ", container.ID[:12])
+		return nil
+	}
+
+	wedeployPort, exists := container.Config.Labels["com.wedeploy.container.container.port"]
+	if !exists {
+		log.Println("Ignoring container without wedeploy port specified ", container.ID[:12])
+		return nil
+	}
+
+	if wedeployPort != port.ExposedPort {
+		log.Println("Ignoring container service with different port specified ", container.ID[:12])
+		return nil
+	}
+
+	service.Name = wedeployService + "_" + wedeployProject
+
 	var p int
 
 	if b.config.Internal == true {
