@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gliderlabs/registrator/bridge"
+	"github.com/wedeploy/registrator/bridge"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -94,7 +94,7 @@ func (r *ZkAdapter) Deregister(service *bridge.Service) error {
 	if (r.path == "/") {
 		basePath = r.path + service.Name
 	}
-	publicPortString := strconv.Itoa(service.Port)	
+	publicPortString := strconv.Itoa(service.Port)
 	servicePortPath := basePath + "/" + service.IP + ":" + publicPortString
 	// Delete the service-port znode
 	err := r.client.Delete(servicePortPath, -1) // -1 means latest version number
