@@ -241,13 +241,11 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 	service.ID = container.ID
 
 	wedeployDeploy, exists := container.Config.Labels["com.wedeploy.container.deploy"]
-
-	if !exists {
-	       log.Println("Ignoring container without wedeploy deploy label ", container.ID[:12])
-	       return nil
-	}
-
-	service.Tags = []string{"wedeploy", wedeployDeploy}
+	if exists {
+	  service.Tags = []string{"wedeploy", wedeployDeploy}
+	} else {
+	  service.Tags = []string{"wedeploy"}
+  }
 
 	wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
 	if !exists {
