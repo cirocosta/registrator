@@ -240,6 +240,15 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 
 	service.ID = container.ID
 
+	wedeployDeploy, exists := container.Config.Labels["com.wedeploy.container.deploy"]
+
+	if !exists {
+	       log.Println("Ignoring container without wedeploy deploy label ", container.ID[:12])
+	       return nil
+	}
+
+	service.Tags = []string{"wedeploy", wedeployDeploy}
+
 	wedeployService, exists := container.Config.Labels["com.wedeploy.container.container"]
 	if !exists {
 		log.Println("Ignoring container without wedeploy service labels ", container.ID[:12])
@@ -307,15 +316,6 @@ func (b *Bridge) newService(port ServicePort, isgroup bool) *Service {
 				log.Println(service.Name + ": using network container IP " + service.IP)
 			}
 		}
-	}
-
-	if port.PortType == "udp" {
-		service.Tags = combineTags(
-			mapDefault(metadata, "tags", ""), b.config.ForceTags, "udp")
-		service.ID = service.ID + ":udp"
-	} else {
-		service.Tags = combineTags(
-			mapDefault(metadata, "tags", ""), b.config.ForceTags)
 	}
 
 	id := mapDefault(metadata, "id", "")
