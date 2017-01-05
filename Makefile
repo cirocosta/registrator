@@ -11,6 +11,9 @@ build:
 	mkdir -p build
 	docker build -t $(NAME):latest .
 
+format:
+	gofmt -s -w .
+
 docs:
 	boot2docker ssh "sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches'" || true
 	docker run --rm -it -p 8000:8000 -v $(PWD):/work gliderlabs/pagebuilder mkdocs serve
@@ -20,4 +23,4 @@ circleci:
 	go get -u github.com/gliderlabs/glu
 	glu circleci
 
-.PHONY: build release docs
+.PHONY: build release docs format

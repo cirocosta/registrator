@@ -2,13 +2,13 @@ package consul
 
 import (
 	"fmt"
-	"log"
-	"net/url"
-	"strings"
-	"os"
-	"github.com/wedeploy/registrator/bridge"
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/wedeploy/registrator/bridge"
+	"log"
+	"net/url"
+	"os"
+	"strings"
 )
 
 const DefaultInterval = "10s"
@@ -33,16 +33,16 @@ func (f *Factory) New(uri *url.URL) bridge.RegistryAdapter {
 	if uri.Scheme == "consul-unix" {
 		config.Address = strings.TrimPrefix(uri.String(), "consul-")
 	} else if uri.Scheme == "consul-tls" {
-	        tlsConfigDesc := &consulapi.TLSConfig {
-			  Address: uri.Host,
-			  CAFile: os.Getenv("CONSUL_CACERT"),
-  			  CertFile: os.Getenv("CONSUL_TLSCERT"),
-  			  KeyFile: os.Getenv("CONSUL_TLSKEY"),
-			  InsecureSkipVerify: false,
+		tlsConfigDesc := &consulapi.TLSConfig{
+			Address:            uri.Host,
+			CAFile:             os.Getenv("CONSUL_CACERT"),
+			CertFile:           os.Getenv("CONSUL_TLSCERT"),
+			KeyFile:            os.Getenv("CONSUL_TLSKEY"),
+			InsecureSkipVerify: false,
 		}
 		tlsConfig, err := consulapi.SetupTLSConfig(tlsConfigDesc)
 		if err != nil {
-		   log.Fatal("Cannot set up Consul TLSConfig", err)
+			log.Fatal("Cannot set up Consul TLSConfig", err)
 		}
 		config.Scheme = "https"
 		transport := cleanhttp.DefaultPooledTransport()
@@ -89,8 +89,8 @@ func (r *ConsulAdapter) Register(service *bridge.Service) error {
 func (r *ConsulAdapter) buildCheck(service *bridge.Service) *consulapi.AgentServiceCheck {
 	check := new(consulapi.AgentServiceCheck)
 
-  check.Interval = "1s"
-  check.TCP = fmt.Sprintf("%s:%s", service.Origin.ExposedIP, service.Origin.ExposedPort)
+	check.Interval = "1s"
+	check.TCP = fmt.Sprintf("%s:%s", service.Origin.ExposedIP, service.Origin.ExposedPort)
 
 	return check
 }
